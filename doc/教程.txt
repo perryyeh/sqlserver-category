@@ -1,0 +1,141 @@
+﻿tree系列（一）：tree in sql
+
+Frist Modified:2007-03-31
+Last Modified:2007-04-02
+Author:Yeat（叶子）
+E-mail:www@yeat.org
+Website:
+http://forum.devms.com
+http://www.yeat.org
+Tag:tree,树,目录树,树型目录,无限分类,无限级目录树,adjacency list model,邻接列表模型,nested set model,嵌套集合模型 
+参考文献：待列
+感谢：江浪，星星，aj
+
+
+正文：
+
+先放张风景图，如图一。
+
+img1
+
+同学们，这是一个什么东西？
+这么小，怎么看？（有同学抗议）
+ok，next，images 2（汗，还好我准备了2张...）
+
+img2
+
+树...（众人...）
+
+（下面有几个小声的：
+不还是很小么？
+我看不见...
+是桦树么？
+是白杨吧。
+不对，是柏树
+...
+这老师弱智吧。
+我们不是三岁了...
+...）
+乖，知道大家都见过（众人流汗ing...）。那么我们今天就来说说树。拿一个公司的组织结构来说，把那个图简化下，如图3：
+
+img3
+
+目录树，无限分类是做系统时很常见的一个功能需求。比如刚才说的公司组织结构，商城产品分类啊，论坛板块分类啊，族谱啊.常见的树一般是从下到上（图3），从上到下（图4），从左到右（图5）。
+
+img4
+img5
+
+（为啥没有右到左的啊？
+右到左才是王道，老祖宗的写法！
+老师我抗议...
+....）
+
+拜托大哥们，不对，同学们，现在不是100年前了好伐，还流行么＝_＝，虽然有可是很少见了，就不列了。（呱呱...窗外乌鸦飞过...）
+
+接触程序以来（众人：7，搞得你很老了一样，这么嫩还装...）,看过些不同的树实现（众人：口水ing）,喂，X同学，小心木地板。888人民币一个平方撒，不要浪费木头。要知道...（众人：有完没完，唐僧啊，我砸...）谁丢的橡皮？这说的袜子？（继续砸...）唉呀呀，我继续。看过些不同的树实现，所以还是列出做个比较吧。如题是tree in sql，当然这个in sql说的是目前比较流行的关系数据库里实现，为了清晰明了的理解，还是拿mssql2k来练练手吧。frist，打开企业管理器建个test数据库。
+
+ok，不多废话，下面开始介绍model。
+
+
+
+
+
+1.adjacency list model(邻接列表模型)
+其实这个模型主要亮点就是每个node都保存一份他的父级node记录，注意是父级，也就是每个node不管自己的son是谁，也不管自己的mother是谁，只管father是谁，并且只记录father node。
+
+打开查询分析器，先来创建个表。（众人:靠，玩什么拽，企业管理器不是更好建么，还是可视化的）
+
+CREATE TABLE [dbo].[tbCategory] (
+	[Cemp] [nvarchar] (50)  NULL ,
+	[Cboss] [nvarchar] (50)  
+) ON [PRIMARY]
+GO
+
+Cemp就是员工名字，Cboss就是该员工的顶头上司了。再来加几个记录，还是以公司组织结构为例：
+
+INSERT tbCategory (Cemp,Cboss)VALUES('CEO:Mr沈',NULL)
+INSERT tbCategory (Cemp,Cboss)VALUES('HR:Ms杨','CEO:Mr沈')
+INSERT tbCategory (Cemp,Cboss)VALUES('CTO:Mr叶','CEO:Mr沈')
+INSERT tbCategory (Cemp,Cboss)VALUES('程序:Mr赵','CTO:Mr叶')
+INSERT tbCategory (Cemp,Cboss)VALUES('美工：Mr王','CTO:Mr叶')
+INSERT tbCategory (Cemp,Cboss)VALUES('CFO:Miss李','CEO:Mr沈')
+INSERT tbCategory (Cemp,Cboss)VALUES('现金会计:张一','CFO:Miss李')
+INSERT tbCategory (Cemp,Cboss)VALUES('出纳：李三','CFO:Miss李')
+
+
+下面在查询分析器列出这个结构，如图6：
+
+SELECT * FROM tbCategory
+
+img6
+
+看起来有点怪，我们还是去掉Cemp这个字段，加一个CateID，类型int，记录员工id，一个CateParentID字段，类型同为int，记录上司id。
+
+
+
+
+
+
+
+
+
+CREATE TABLE category(category_id INT AUTO_INCREMENT PRIMARY KEY,name VARCHAR(20) NOT NULL,parent INT DEFAULT NULL);
+
+INSERT INTO category VALUES(1,'ELECTRONICS',NULL),(2,'TELEVISIONS',1),(3,'TUBE',2),(4,'LCD',2),(5,'PLASMA',2),(6,'PORTABLE ELECTRONICS',1),(7,'MP3 PLAYERS',6),(8,'FLASH',7),(9,'CD PLAYERS',6),(10,'2 WAY RADIOS',6);
+
+SELECT * FROM category ORDER BY category_id;
+
++-------------+----------------------+--------+
+| category_id | name                 | parent |
++-------------+----------------------+--------+
+|           1 | ELECTRONICS          |   NULL |
+|           2 | TELEVISIONS          |      1 |
+|           3 | TUBE                 |      2 |
+|           4 | LCD                  |      2 |
+|           5 | PLASMA               |      2 |
+|           6 | PORTABLE ELECTRONICS |      1 |
+|           7 | MP3 PLAYERS          |      6 |
+|           8 | FLASH                |      7 |
+|           9 | CD PLAYERS           |      6 |
+|          10 | 2 WAY RADIOS         |      6 |
++-------------+----------------------+--------+
+
+这就是网上常见的目录树/无限分类的结构。
+
+另外还有个变种。国内的会计科目编码设置是类似如下的结构：
+
+科目代码 科目名称
+101 现金
+10101 人民币
+102 银行存款
+10201 工行存款
+10202 中行存款一美元（复币式，USD）
+109 其他货币资金
+111 短期投资
+112 应收票据
+11201 东方机械厂
+11202 南方车辆厂
+
+这其实也是邻接列表模型，不过实行的是区间码，以固定位数存储和区分本级编码和父级编码。不过网上也常有这种编码来实现无线级别分类的。另外早先的商城系统中的系统分类，还有把每级分类都用一个表表存的，其实也是邻接模型的变种--不过5级分类就要拆成5个表，10级分类就要拆成10个表实在是不符合范式，查询也很麻烦。
+
+2.nested set model(嵌套集合模型)
